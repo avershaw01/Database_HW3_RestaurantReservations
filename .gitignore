@@ -1,7 +1,9 @@
 # Java compiled files
 *.class
+# Ignore compiled libraries except the MySQL Connector/J in lib
 *.jar
-*.war
+!lib/*.jar*
+.war
 *.ear
 out/
 target/
