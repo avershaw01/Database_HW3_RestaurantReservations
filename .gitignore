@@ -1,0 +1,45 @@
+# Java compiled files
+*.class
+*.jar
+*.war
+*.ear
+out/
+target/
+build/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Other Java IDEs
+.eclipse/
+.settings/
+.project
+.classpath
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+
+# Local database connection settings
+db-credentials.properties
+application-local.properties
+
+# Local exports and generated database files
+*.dump
+*.bak.sql
