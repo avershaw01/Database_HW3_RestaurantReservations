@@ -43,6 +43,17 @@ SHOW TABLES;
 In summary, each user has to have their own MySQL workbench
 and connection and has to execute the Java and SQL scripts independently.
 
+Running temporary connection test:
+1. Make sure the /src directory is marked as a source directory in IntelliJ
+To do this, right-click the /src folder, select mark directory as...
+And select sources Root (should be blue)
+This will ensure the .java file is runnable.
+2. Next, AFTER having MySQL Workbench running with the connection open, run the .java testing file.
+3. If you do not see "Successfully connected to MySQL!" try checking SQL server is running:
+4. Press `Windows + r` on the keyboard
+5. Enter `services.msc` and press enter
+6. Look for something named MySQL80 or similar, and make sure it says Running
+7. If you do not see it, MySQL server may not be installed.
 
 Inside this repository, there are directories for organization:
 /sql
