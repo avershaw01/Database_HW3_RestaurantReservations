@@ -9,7 +9,7 @@ public class DatabaseConnectionTest {
         // Database connection information
         String url = "jdbc:mysql://localhost:3306/restaurant_db";
         String username = "root";
-        String password = "YOUR_MYSQL_PASSWORD";
+        String password = "root";
 
         // Attempt to connect to MySQL
         try (Connection connection =
