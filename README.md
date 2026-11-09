@@ -23,7 +23,7 @@ Inside this repository, there are directories for organization:
     Contains sql scripts
 /csv
     Contains the .csv files containing our data
-/java
+/src
     Contains Java code/programs
 /docs
     Contains the ERD/Crow's Foot diagrams and initial project instructions
