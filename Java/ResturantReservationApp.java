@@ -1,0 +1,396 @@
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.io.Serial;
+import java.sql.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+
+public class RestaurantReservationApp extends JFrame {
+    @Serial
+    private static final long serialVersionUID = 1L;
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/RestaurantReservationDB";
+    private static final String DB_USER = "root";
+    private static final String DB_PASSWORD = "2605";
+
+    // ================= PASTE YOUR SIX QUERIES HERE =================
+    // Q1: Reservations per table per month. GROUP BY + JOIN. No parameters.
+    private static final String Q1_SQL = "";
+
+    // Q2: Customer reservation history. JOIN Customer and ReservationTable.
+    // Exactly TWO ? markers: 1 = last name, 2 = phone.
+    // The same search text is bound to both markers (exact matching).
+    private static final String Q2_SQL = "";
+
+    // Q3: Small / medium / large parties. CASE + table capacity. No parameters.
+    private static final String Q3_SQL = "";
+
+    // Q4: Open tables at a chosen time; NOT IN booked tables.
+    // Exactly TWO ? markers IN THIS ORDER:
+    // 1 = party size (INTEGER, capacity filter), 2 = ResDateTime (TIMESTAMP).
+    // Place the capacity filter before the booking subquery in your SQL.
+    private static final String Q4_SQL = "";
+
+    // Q5: Customers who booked every table in a section. Double NOT EXISTS.
+    // Exactly ONE ? marker: section (Main, Patio, or Bar).
+    private static final String Q5_SQL = "";
+
+    // Q6: Bookings above that customer's average. Correlated AVG. No parameters.
+    private static final String Q6_SQL = "";
+    // ==============================================================
+
+    private static final Color CREAM = new Color(255, 248, 240);
+    private static final Color ORANGE = new Color(183, 75, 28);
+    private static final Color INK = new Color(68, 43, 30);
+    private static final Color PALE = new Color(250, 225, 201);
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter
+            .ofPattern("uuuu-MM-dd HH:mm:ss").withResolverStyle(ResolverStyle.STRICT);
+
+    public RestaurantReservationApp() {
+        super("Restaurant Reservations");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        JPanel content = new JPanel(new BorderLayout(24, 24));
+        content.setBorder(BorderFactory.createEmptyBorder(28, 32, 24, 32));
+        JPanel heading = new JPanel(new GridLayout(0, 1, 0, 6));
+        JLabel title = new JLabel("Restaurant reservations");
+        title.setFont(new Font("SansSerif", Font.BOLD, 28));
+        title.setForeground(ORANGE);
+        heading.add(title);
+        heading.add(new JLabel("Customers, tables, and bookings in one place."));
+        content.add(heading, BorderLayout.NORTH);
+
+        JTabbedPane tabs = new JTabbedPane();
+        JPanel records = new JPanel(new GridLayout(0, 1, 10, 12));
+        records.setBorder(BorderFactory.createEmptyBorder(22, 18, 22, 18));
+        addMenuButton(records, "Add customer", () -> showForm("Customer",
+                new String[]{"CustomerID", "FirstName", "LastName", "Phone", "Email"},
+                new int[]{Types.INTEGER, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR},
+                new boolean[]{true, true, true, false, false}));
+        addMenuButton(records, "Add dining table", () -> showForm("DiningTable",
+                new String[]{"TableID", "TableNumber", "Capacity", "Section"},
+                new int[]{Types.INTEGER, Types.INTEGER, Types.INTEGER, Types.VARCHAR},
+                new boolean[]{true, true, true, true}));
+        addMenuButton(records, "Add reservation", () -> showForm("ReservationTable",
+                new String[]{"ReservationID", "CustomerID", "TableID", "ResDateTime", "PartySize"},
+                new int[]{Types.INTEGER, Types.INTEGER, Types.INTEGER, Types.TIMESTAMP, Types.INTEGER},
+                new boolean[]{true, true, true, true, true}));
+        // Basic list views are complete; only the six assignment queries are blank.
+        addMenuButton(records, "View customers", () -> showQueryResults("Customers",
+                "SELECT * FROM Customer ORDER BY CustomerID"));
+        addMenuButton(records, "View dining tables", () -> showQueryResults("Dining tables",
+                "SELECT * FROM DiningTable ORDER BY TableNumber"));
+        addMenuButton(records, "View reservations", () -> showQueryResults("Reservations",
+                "SELECT * FROM ReservationTable ORDER BY ResDateTime, ReservationID"));
+        tabs.addTab("Manage records", records);
+        JPanel queries = new JPanel(new GridLayout(0, 1, 10, 12));
+        queries.setBorder(BorderFactory.createEmptyBorder(22, 18, 22, 18));
+        addMenuButton(queries, "Q1  /  Reservations per table per month",
+                () -> showQueryResults("Q1 - Monthly reservations", Q1_SQL));
+        addMenuButton(queries, "Q2  /  Customer reservation history", this::findCustomerHistory);
+        addMenuButton(queries, "Q3  /  Small, medium, and large parties",
+                () -> showQueryResults("Q3 - Party categories", Q3_SQL));
+        addMenuButton(queries, "Q4  /  Open tables at a chosen time", this::findOpenTables);
+        addMenuButton(queries, "Q5  /  Customers who booked every table in a section", this::findSectionCustomers);
+        addMenuButton(queries, "Q6  /  Bookings above the customer's average",
+                () -> showQueryResults("Q6 - Above-average bookings", Q6_SQL));
+        tabs.addTab("Explore reservations", queries);
+        content.add(tabs, BorderLayout.CENTER);
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.add(new JLabel("RestaurantReservationDB"), BorderLayout.WEST);
+        JButton exit = button("Close");
+        exit.addActionListener(e -> dispose());
+        footer.add(exit, BorderLayout.EAST);
+        content.add(footer, BorderLayout.SOUTH);
+        setContentPane(content);
+        pack();
+        setMinimumSize(new Dimension(710, 580));
+        setSize(760, 620);
+        setLocationRelativeTo(null);
+    }
+
+    private static JButton button(String text) {
+        JButton button = new JButton(text);
+        button.setBackground(ORANGE);
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setBorder(BorderFactory.createEmptyBorder(12, 18, 12, 18));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private void addMenuButton(JPanel panel, String text, Runnable action) {
+        JButton button = button(text);
+        button.setHorizontalAlignment(SwingConstants.LEFT);
+        button.addActionListener(event -> action.run());
+        panel.add(button);
+    }
+
+    private void showForm(String table, String[] columns, int[] types, boolean[] required) {
+        JDialog dialog = new JDialog(this, "Add " + table, true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        JPanel fields = new JPanel(new GridLayout(columns.length, 2, 12, 12));
+        JTextField[] inputs = new JTextField[columns.length];
+        for (int i = 0; i < columns.length; i++) {
+            String label = columns[i];
+            if (types[i] == Types.TIMESTAMP) label += " (YYYY-MM-DD HH:mm:ss)";
+            if (required[i]) label += " *";
+            fields.add(new JLabel(label));
+            inputs[i] = new JTextField(25);
+            fields.add(inputs[i]);
+        }
+        JButton save = button("Save record");
+        JButton close = button("Close");
+        close.addActionListener(e -> dialog.dispose());
+        save.addActionListener(e -> {
+            final Object[] values;
+            try {
+                values = readValues(columns, types, required, inputs);
+            } catch (IllegalArgumentException ex) {
+                message(dialog, ex.getMessage(), "Check your input", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            save.setEnabled(false);
+            save.setText("Saving...");
+            new SwingWorker<Integer, Void>() {
+                @Override protected Integer doInBackground() throws SQLException {
+                    return insertRecord(table, columns, types, values);
+                }
+                @Override protected void done() {
+                    save.setEnabled(true);
+                    save.setText("Save record");
+                    try {
+                        get();
+                        if (!dialog.isDisplayable()) return;
+                        JOptionPane.showMessageDialog(dialog, "Record saved.");
+                        for (JTextField input : inputs) input.setText("");
+                        inputs[0].requestFocusInWindow();
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    } catch (ExecutionException ex) {
+                        message(dialog, "Could not save the record:\n" + ex.getCause().getMessage(),
+                                "Database error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }.execute();
+        });
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttons.add(save);
+        buttons.add(close);
+        JPanel content = new JPanel(new BorderLayout(16, 20));
+        content.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+        content.add(new JLabel("* Required. For reservations, add the customer and table first."), BorderLayout.NORTH);
+        content.add(fields, BorderLayout.CENTER);
+        content.add(buttons, BorderLayout.SOUTH);
+        dialog.setContentPane(content);
+        dialog.getRootPane().setDefaultButton(save);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private static int positiveInteger(String text, String name) {
+        try {
+            int value = Integer.parseInt(text.trim());
+            if (value > 0) return value;
+        } catch (NumberFormatException ignored) { }
+        throw new IllegalArgumentException(name + " must be a positive whole number.");
+    }
+
+    private static Timestamp timestamp(String text) {
+        try {
+            return Timestamp.valueOf(LocalDateTime.parse(text.trim(), DATE_TIME));
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Enter a valid date/time as YYYY-MM-DD HH:mm:ss.");
+        }
+    }
+
+    private Object[] readValues(String[] columns, int[] types, boolean[] required, JTextField[] inputs) {
+        Object[] values = new Object[columns.length];
+        for (int i = 0; i < columns.length; i++) {
+            String text = inputs[i].getText().trim();
+            if (text.isEmpty()) {
+                if (required[i]) throw new IllegalArgumentException(columns[i] + " is required.");
+                values[i] = null;
+            } else if (types[i] == Types.INTEGER) {
+                values[i] = positiveInteger(text, columns[i]);
+            } else if (types[i] == Types.TIMESTAMP) {
+                values[i] = timestamp(text);
+            } else {
+                values[i] = text;
+            }
+        }
+        return values;
+    }
+
+    private int insertRecord(String table, String[] columns, int[] types, Object[] values) throws SQLException {
+        // Identifiers are fixed in the menu; entered values are always bound parameters.
+        String placeholders = String.join(", ", Collections.nCopies(columns.length, "?"));
+        String sql = "INSERT INTO " + table + " (" + String.join(", ", columns)
+                + ") VALUES (" + placeholders + ")";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            for (int i = 0; i < values.length; i++) {
+                if (values[i] == null) statement.setNull(i + 1, types[i]);
+                else statement.setObject(i + 1, values[i], types[i]);
+            }
+            return statement.executeUpdate();
+        }
+    }
+
+    private boolean queryReady(String sql) {
+        if (!sql.trim().isEmpty()) return true;
+        JOptionPane.showMessageDialog(this,
+                "This query is ready for your SQL. Paste it into the matching Q1_SQL - Q6_SQL\n"
+                + "constant near the top of RestaurantReservationApp.java, then compile and run again.",
+                "Query not added yet", JOptionPane.INFORMATION_MESSAGE);
+        return false;
+    }
+
+    private void findCustomerHistory() {
+        if (!queryReady(Q2_SQL)) return;
+        String search = JOptionPane.showInputDialog(this, "Enter a customer's last name or phone:",
+                "Customer history", JOptionPane.QUESTION_MESSAGE);
+        if (search == null) return;
+        search = search.trim();
+        if (search.isEmpty()) {
+            message(this, "Enter a last name or phone.", "Check your input", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        showQueryResults("Q2 - Customer history", Q2_SQL, search, search);
+    }
+
+    private void findOpenTables() {
+        if (!queryReady(Q4_SQL)) return;
+        JTextField when = new JTextField(22);
+        JTextField size = new JTextField(22);
+        JPanel fields = new JPanel(new GridLayout(0, 2, 12, 12));
+        fields.add(new JLabel("Date/time (YYYY-MM-DD HH:mm:ss)"));
+        fields.add(when);
+        fields.add(new JLabel("Party size"));
+        fields.add(size);
+        while (JOptionPane.showConfirmDialog(this, fields, "Find open tables",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+            try {
+                int partySize = positiveInteger(size.getText(), "Party size");
+                Timestamp dateTime = timestamp(when.getText());
+                showQueryResults("Q4 - Open tables", Q4_SQL, partySize, dateTime);
+                return;
+            } catch (IllegalArgumentException ex) {
+                message(this, ex.getMessage(), "Check your input", JOptionPane.WARNING_MESSAGE);
+            }
+        }
+    }
+
+    private void findSectionCustomers() {
+        if (!queryReady(Q5_SQL)) return;
+        // Editable so sections added later can also be searched.
+        JComboBox<String> sections = new JComboBox<>(new String[]{"Main", "Patio", "Bar"});
+        sections.setEditable(true);
+        if (JOptionPane.showConfirmDialog(this, sections, "Choose a section",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
+        String section = String.valueOf(sections.getSelectedItem()).trim();
+        if (section.isEmpty()) {
+            message(this, "Enter a section.", "Check your input", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        showQueryResults("Q5 - Every table in " + section, Q5_SQL, section);
+    }
+
+    private void showQueryResults(String title, String sql, Object... parameters) {
+        if (!queryReady(sql)) return;
+        JDialog dialog = new JDialog(this, title, false);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        JLabel status = new JLabel("Loading results...");
+        status.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        JTable table = new JTable();
+        table.setFillsViewportHeight(true);
+        table.setAutoCreateRowSorter(true);
+        table.setRowHeight(30);
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setSelectionBackground(PALE);
+        table.setSelectionForeground(INK);
+        table.getTableHeader().setBackground(ORANGE);
+        table.getTableHeader().setForeground(Color.WHITE);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JButton close = button("Close");
+        close.addActionListener(e -> dialog.dispose());
+        JPanel bottom = new JPanel(new BorderLayout());
+        bottom.add(status, BorderLayout.CENTER);
+        bottom.add(close, BorderLayout.EAST);
+        dialog.add(new JScrollPane(table), BorderLayout.CENTER);
+        dialog.add(bottom, BorderLayout.SOUTH);
+        dialog.setSize(960, 480);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+        new SwingWorker<DefaultTableModel, Void>() {
+            @Override protected DefaultTableModel doInBackground() throws SQLException {
+                try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+                     PreparedStatement statement = connection.prepareStatement(sql)) {
+                    for (int i = 0; i < parameters.length; i++) {
+                        Object value = parameters[i];
+                        if (value instanceof Integer) statement.setInt(i + 1, (Integer) value);
+                        else if (value instanceof Timestamp) statement.setTimestamp(i + 1, (Timestamp) value);
+                        else statement.setString(i + 1, (String) value);
+                    }
+                    try (ResultSet results = statement.executeQuery()) {
+                        ResultSetMetaData metadata = results.getMetaData();
+                        int count = metadata.getColumnCount();
+                        String[] names = new String[count];
+                        for (int i = 0; i < count; i++) names[i] = metadata.getColumnLabel(i + 1);
+                        List<Object[]> rows = new ArrayList<>();
+                        while (results.next()) {
+                            Object[] row = new Object[count];
+                            for (int i = 0; i < count; i++) row[i] = results.getObject(i + 1);
+                            rows.add(row);
+                        }
+                        return new DefaultTableModel(rows.toArray(new Object[0][]), names) {
+                            @Override public boolean isCellEditable(int row, int column) { return false; }
+                        };
+                    }
+                }
+            }
+            @Override protected void done() {
+                if (!dialog.isDisplayable()) return;
+                try {
+                    DefaultTableModel model = get();
+                    table.setModel(model);
+                    status.setText(model.getRowCount() + " record(s) found.");
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    status.setText("Query interrupted.");
+                } catch (ExecutionException ex) {
+                    status.setText("Unable to load results.");
+                    message(dialog, "Query failed:\n" + ex.getCause().getMessage(),
+                            "Database error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }.execute();
+    }
+
+    private static void message(Component parent, String text, String title, int type) {
+        JOptionPane.showMessageDialog(parent, text, title, type);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            UIManager.put("Panel.background", CREAM);
+            UIManager.put("OptionPane.background", CREAM);
+            UIManager.put("Label.foreground", INK);
+            UIManager.put("Label.font", new Font("SansSerif", Font.PLAIN, 14));
+            UIManager.put("Button.font", new Font("SansSerif", Font.BOLD, 14));
+            UIManager.put("TextField.font", new Font("SansSerif", Font.PLAIN, 14));
+            UIManager.put("TabbedPane.font", new Font("SansSerif", Font.BOLD, 14));
+            UIManager.put("TabbedPane.selected", PALE);
+            UIManager.put("TabbedPane.background", CREAM);
+            new RestaurantReservationApp().setVisible(true);
+        });
+    }
+}
