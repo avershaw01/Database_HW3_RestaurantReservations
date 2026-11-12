@@ -1,66 +1,97 @@
-# Database_HW3_RestaurantReservations
-This is the group repository for Database HW3
-Group Members: Nathan, Andre, Christian
+# Restaurant Reservations Database
 
-#Set-Up Instructions:
+Group project for CSC 4500 Database Homework 3.
 
-Establish the library for connecting to MySQL:
- | In IntelliJ:
-1. Open File → Project Structure.
-2. Select Modules.
-3. Select the Dependencies tab.
-4. Click the + button.
-5. Select JARs or Directories.
-6. Navigate to lib and select your MySQL Connector/J .jar.
-7. Make sure its scope is Compile.
-8. Click Apply, then OK.
+Group members: Nathan, Andre, and Christian.
 
-The .jar file is committed to the GitHub repository,
-so no download is necessary.
+## What this project contains
 
-Creating the MySQL Workbench Connection:
- | Open MySQL Workbench
-1. Click the `+` icon to create a new connection
-2. Fill the following fields:
-   a. Connection Name = RestaurantReservations
-   b. Hostname = 127.0.0.1
-   c. Port = 3306
-   c. Username = root (Or your configured MySQL username)
-   c. Port = *** (The password you use for MySQL)
-3. Open up the connection you just created
-4. Next we will run the create table script to build the framework of our database
-5. Select File -> Open SQL Script
-6. Navigate to the repository, go to /sql/Create Table.SQL
-7. Click to run the script
-8. Verify it ran properly by running
-```
-SHOW DATABASES;
+### Main project files
 
-USE restaurant_db;
-SHOW TABLES;
-```
+- Java/RestaurantReservationApp.java — the Swing/JDBC desktop app. It can add and list customers, dining tables, and reservations, and it provides a menu for Q1–Q6. The app connects to the MySQL database RestaurantReservationDB. The query constants in this file are the versions the menu actually runs.
+- sql/FillDB.sql — creates RestaurantReservationDB, defines its three tables, and imports the three CSV files. This is the setup script intended for the current Java app.
+- sql/CreateTable.SQL — an alternate schema-only script. It creates restaurant_db and an empty set of tables. It does not load the CSV data, and the current Java app does not connect to that database. Use this only if you specifically need the alternate empty schema; do not run it as part of the normal app setup.
+- Queries — an older Java source draft without a .java extension. It contains SQL for Q3–Q6, while Q1 and Q2 are blank. The active app is Java/RestaurantReservationApp.java; after transferring and reviewing any useful query code, this draft can be removed.
 
-In summary, each user has to have their own MySQL workbench
-and connection and has to execute the Java and SQL scripts independently.
+### Data, diagrams, and presentation
 
-Running temporary connection test:
-1. Make sure the /src directory is marked as a source directory in IntelliJ
-To do this, right-click the /src folder, select mark directory as...
-And select sources Root (should be blue)
-This will ensure the .java file is runnable.
-2. Next, AFTER having MySQL Workbench running with the connection open, run the .java testing file.
-3. If you do not see "Successfully connected to MySQL!" try checking SQL server is running:
-4. Press `Windows + r` on the keyboard
-5. Enter `services.msc` and press enter
-6. Look for something named MySQL80 or similar, and make sure it says Running
-7. If you do not see it, MySQL server may not be installed.
+- csv/Customer.csv — sample customer rows.
+- csv/DiningTable.csv — sample dining-table rows.
+- csv/ReservationTable.csv — sample reservation rows.
+- documents/HW3_Instructions.pdf — assignment requirements.
+- documents/Reservations_Chen_Diagram.pdf — Chen ER model and design notes.
+- documents/Reservations_Crows_Foot_ERD.pdf — Crow's Foot ERD, data dictionary, and sample schema.
+- Restaurant_Reservations_Presentation.pptx — group presentation slides.
 
-Inside this repository, there are directories for organization:
-/sql
-    Contains sql scripts
-/csv
-    Contains the .csv files containing our data
-/src
-    Contains Java code/programs
-/docs
-    Contains the ERD/Crow's Foot diagrams and initial project instructions
+### Java support and project files
+
+- src/DatabaseConnectionTest.java — small JDBC connection check for restaurant_db; it is a separate test and uses its own connection settings.
+- src/CustomerQueryTest.java — unfinished customer-query test; it is not the main application.
+- lib/mysql-connector-j-26.7.0.jar — MySQL Connector/J library required by the Java program.
+- .gitignore — excludes compiled output, local settings, and temporary files from Git.
+- .gitattributes — Git text-file handling settings.
+- .idea/ — IntelliJ project configuration. It is IDE metadata, not required source code.
+- out/ — locally compiled IntelliJ output. It is generated and should not be edited by hand.
+
+## Run the database and app locally
+
+### Requirements
+
+- MySQL Server and MySQL Workbench installed and running.
+- IntelliJ IDEA or another Java IDE.
+- The repository's MySQL Connector/J jar in lib/.
+
+### 1. Configure the CSV paths in the import script
+
+sql/FillDB.sql currently contains absolute LOAD DATA LOCAL INFILE paths from a different computer. Before running it, replace each of the three paths with the full path to the corresponding CSV file in your own checkout. Use forward slashes in the SQL path, for example:
+
+    LOAD DATA LOCAL INFILE 'C:/your/path/Database_HW3_RestaurantReservations/csv/Customer.csv'
+
+Do the same for DiningTable.csv and ReservationTable.csv.
+
+### 2. Run the database setup
+
+Open sql/FillDB.sql in MySQL Workbench and run it using your local MySQL connection. The script creates RestaurantReservationDB, creates Customer, DiningTable, and ReservationTable, then imports the CSV data.
+
+Warning: FillDB.sql starts by dropping RestaurantReservationDB. Running it again deletes and rebuilds that database, including any records you added through the app. Back up any data you need before rerunning it.
+
+The script enables LOCAL INFILE with SET GLOBAL local_infile = 1, which may require a MySQL account with permission to change server settings. MySQL Workbench and the server must allow local infile loading. If loading fails, enable local infile for both the server and the Workbench connection, then reconnect and rerun the import.
+
+Verify the setup in Workbench:
+
+    USE RestaurantReservationDB;
+    SHOW TABLES;
+
+    SELECT COUNT(*) AS customers FROM Customer;
+    SELECT COUNT(*) AS dining_tables FROM DiningTable;
+    SELECT COUNT(*) AS reservations FROM ReservationTable;
+
+The included CSV files currently contain 50 customers, 30 dining tables, and 75 reservations.
+
+### 3. Configure and run the Java app
+
+1. In IntelliJ, open the repository as a project.
+2. Add lib/mysql-connector-j-26.7.0.jar as a module dependency with Compile scope.
+3. Open Java/RestaurantReservationApp.java and set DB_USER and DB_PASSWORD near the top to match your local MySQL account. Keep DB_URL pointed at RestaurantReservationDB.
+4. Run RestaurantReservationApp. Use Manage records to add or view records and Explore reservations to run queries.
+
+The app currently has blank Q1–Q6 query constants. It will not execute those assignment queries until the SQL is added to the corresponding constants. Q3–Q6 in the Queries draft can be used as a starting point; complete Q1 and Q2 and review all six queries in the active app before relying on the query menu.
+
+## Query checklist
+
+The assignment expects six queries for this three-person group:
+
+- Q1 — reservations per table per month (GROUP BY and a join).
+- Q2 — customer reservation history (user input and a join).
+- Q3 — small, medium, or large party (CASE and table capacity).
+- Q4 — open tables at a chosen time (date/time and party-size input, with a NOT IN subquery).
+- Q5 — customers who booked every table in a selected section (division using double NOT EXISTS).
+- Q6 — bookings larger than that customer's average (correlated AVG subquery).
+
+For Q2, the app expects two ? parameters: last name first and phone second. For Q4, it expects party size first and date/time second. For Q5, it expects one parameter: section.
+
+## Notes
+
+- FillDB.sql and CreateTable.SQL create different database names and serve different purposes. The app uses RestaurantReservationDB, so use FillDB.sql for the normal CSV-backed setup.
+- The setup script's CSV paths and the Java database credentials are local machine settings. Update them for your own computer; do not commit personal passwords.
+
