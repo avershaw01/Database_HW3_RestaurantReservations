@@ -8,10 +8,12 @@ Group members: Nathan, Andre, and Christian.
 
 ### Main project files
 
-- Java/RestaurantReservationApp.java — the Swing/JDBC desktop app. It can add and list customers, dining tables, and reservations, and it provides a menu for Q1–Q6. The app connects to the MySQL database RestaurantReservationDB. The query constants in this file are the versions the menu actually runs.
+- Java/RestaurantReservationApp.java — the Swing/JDBC desktop app.
+It can add and list customers, dining tables, and reservations, and it provides a menu for Q1–Q6.
+The app connects to the MySQL database RestaurantReservationDB. The query constants in this file are the
+versions the menu actually runs.
 - sql/FillDB.sql — creates RestaurantReservationDB, defines its three tables, and imports the three CSV files. This is the setup script intended for the current Java app.
 - sql/CreateTable.SQL — an alternate schema-only script. It creates restaurant_db and an empty set of tables. It does not load the CSV data, and the current Java app does not connect to that database. Use this only if you specifically need the alternate empty schema; do not run it as part of the normal app setup.
-- Queries — an older Java source draft without a .java extension. It contains SQL for Q3–Q6, while Q1 and Q2 are blank. The active app is Java/RestaurantReservationApp.java; after transferring and reviewing any useful query code, this draft can be removed.
 
 ### Data, diagrams, and presentation
 
