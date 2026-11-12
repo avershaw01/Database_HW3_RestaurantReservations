@@ -29,20 +29,73 @@ public class RestaurantReservationApp extends JFrame {
     private static final String Q2_SQL = "";
 
     // Q3: Small / medium / large parties. CASE + table capacity. No parameters.
-    private static final String Q3_SQL = "";
+    private static final String Q3_SQL =
+            "SELECT ReservationTable.ReservationID, "
+                    + "       ReservationTable.PartySize, "
+                    + "       DiningTable.TableNumber, "
+                    + "       DiningTable.Capacity, "
+                    + "       CASE "
+                    + "           WHEN ReservationTable.PartySize <= 2 THEN 'Small' "
+                    + "           WHEN ReservationTable.PartySize <= 4 THEN 'Medium' "
+                    + "           ELSE 'Large' "
+                    + "       END AS PartyCategory "
+                    + "FROM ReservationTable "
+                    + "JOIN DiningTable "
+                    + "    ON ReservationTable.TableID = DiningTable.TableID "
+                    + "ORDER BY ReservationTable.ReservationID";
 
     // Q4: Open tables at a chosen time; NOT IN booked tables.
     // Exactly TWO ? markers IN THIS ORDER:
     // 1 = party size (INTEGER, capacity filter), 2 = ResDateTime (TIMESTAMP).
     // Place the capacity filter before the booking subquery in your SQL.
-    private static final String Q4_SQL = "";
+    private static final String Q4_SQL =
+            "SELECT DiningTable.TableID, "
+                    + "       DiningTable.TableNumber, "
+                    + "       DiningTable.Capacity, "
+                    + "       DiningTable.Section "
+                    + "FROM DiningTable "
+                    + "WHERE DiningTable.Capacity >= ? "
+                    + "  AND DiningTable.TableID NOT IN ( "
+                    + "      SELECT ReservationTable.TableID "
+                    + "      FROM ReservationTable "
+                    + "      WHERE ReservationTable.ResDateTime = ? "
+                    + "  ) "
+                    + "ORDER BY DiningTable.Capacity, DiningTable.TableNumber";
 
     // Q5: Customers who booked every table in a section. Double NOT EXISTS.
     // Exactly ONE ? marker: section (Main, Patio, or Bar).
-    private static final String Q5_SQL = "";
+    private static final String Q5_SQL =
+            "SELECT Customer.CustomerID, Customer.FirstName, Customer.LastName "
+                    + "FROM Customer "
+                    + "WHERE NOT EXISTS ( "
+                    + "    SELECT 1 "
+                    + "    FROM DiningTable "
+                    + "    WHERE DiningTable.Section = ? "
+                    + "      AND NOT EXISTS ( "
+                    + "          SELECT 1 "
+                    + "          FROM ReservationTable "
+                    + "          WHERE ReservationTable.CustomerID = Customer.CustomerID "
+                    + "            AND ReservationTable.TableID = DiningTable.TableID "
+                    + "      ) "
+                    + ")";
 
     // Q6: Bookings above that customer's average. Correlated AVG. No parameters.
-    private static final String Q6_SQL = "";
+    private static final String Q6_SQL = "SELECT ReservationTable.ReservationID,\n" +
+            "       Customer.CustomerID,\n" +
+            "       Customer.FirstName,\n" +
+            "       Customer.LastName,\n" +
+            "       ReservationTable.TableID,\n" +
+            "       ReservationTable.ResDateTime,\n" +
+            "       ReservationTable.PartySize\n" +
+            "FROM ReservationTable\n" +
+            "JOIN Customer\n" +
+            "    ON ReservationTable.CustomerID = Customer.CustomerID\n" +
+            "WHERE ReservationTable.PartySize > (\n" +
+            "    SELECT AVG(CustomerReservations.PartySize)\n" +
+            "    FROM ReservationTable AS CustomerReservations\n" +
+            "    WHERE CustomerReservations.CustomerID = ReservationTable.CustomerID\n" +
+            ")\n" +
+            "ORDER BY Customer.CustomerID, ReservationTable.ResDateTime;";
     // ==============================================================
 
     private static final Color CREAM = new Color(255, 248, 240);
