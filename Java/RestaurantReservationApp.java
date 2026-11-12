@@ -21,12 +21,33 @@ public class RestaurantReservationApp extends JFrame {
 
     // ================= PASTE YOUR SIX QUERIES HERE =================
     // Q1: Reservations per table per month. GROUP BY + JOIN. No parameters.
-    private static final String Q1_SQL = "";
+    private static final String Q1_SQL =
+            "SELECT d.TableNumber, "
+                    + "d.Section, "
+                    + "DATE_FORMAT(r.ResDateTime, '%Y-%m') AS ResMonth, "
+                    + "COUNT(*) AS Reservations, "
+                    + "SUM(r.PartySize) AS TotalGuests "
+                    + "FROM DiningTable d "
+                    + "JOIN ReservationTable r ON r.TableID = d.TableID "
+                    + "GROUP BY d.TableNumber, d.Section, DATE_FORMAT(r.ResDateTime, '%Y-%m') "
+                    + "ORDER BY ResMonth, d.TableNumber";
 
     // Q2: Customer reservation history. JOIN Customer and ReservationTable.
     // Exactly TWO ? markers: 1 = last name, 2 = phone.
     // The same search text is bound to both markers (exact matching).
-    private static final String Q2_SQL = "";
+    private static final String Q2_SQL =
+            "SELECT c.FirstName, "
+                    + "c.LastName, "
+                    + "c.Phone, "
+                    + "r.ResDateTime, "
+                    + "d.TableNumber, "
+                    + "d.Section, "
+                    + "r.PartySize "
+                    + "FROM Customer c "
+                    + "JOIN ReservationTable r ON r.CustomerID = c.CustomerID "
+                    + "JOIN DiningTable d ON d.TableID = r.TableID "
+                    + "WHERE c.LastName = ? OR c.Phone = ? "
+                    + "ORDER BY r.ResDateTime";
 
     // Q3: Small / medium / large parties. CASE + table capacity. No parameters.
     private static final String Q3_SQL =
