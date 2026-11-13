@@ -9,15 +9,10 @@ Group members: Nathan, Andre, and Christian.
 ### Database and Java application
 
 - `Java/RestaurantReservationApp.java` — Swing/JDBC app for adding and viewing customers, tables, and reservations, and running Q1–Q6. It connects to `RestaurantReservationDB`. Its Java query constants are the versions used by the app.
-- `sql/FillDB.sql` — normal database setup for this app. It creates `RestaurantReservationDB` and its tables, then imports the three CSV files. It is a setup/import script, not the place to keep the Workbench versions of the assignment queries.
-- `sql/CreateTable.SQL` — alternate schema-only script. It creates an empty `restaurant_db` and does not import CSV data. The current app does not use this database, so do not run this as part of the normal setup.
+- `sql/FillDB.SQL` — normal database setup for this app. It creates `RestaurantReservationDB` and its tables, then imports the three CSV files. It is a setup/import script, not the place to keep assignment queries.
+- `sql/Queries.SQL` — Workbench-ready versions of Q1–Q6. It uses editable MySQL session variables for inputs, rather than the Java app’s `?` placeholders.
+- `sql/CreateTable.SQL` — alternate schema-only script. It creates an empty `restaurant_db` and does not import CSV data. The current app does not use this database, so do not run it as part of the normal setup.
 - `Queries` — older Java source draft without a `.java` extension. It has Q3–Q6 but leaves Q1 and Q2 blank. The active app is in `Java/RestaurantReservationApp.java`. Once any needed material has been copied and checked, the draft is not needed to run the app.
-
-### Assignment queries
-
-Keep the MySQL Workbench versions of Q1–Q6 in a separate file, for example `sql/Queries.sql`. That file does not exist in the repository yet; add it when preparing the query submission. Do not append the queries to `FillDB.sql`: that script drops and rebuilds the database when run, and its job is to create and populate the database.
-
-The Java app uses `?` placeholders for user inputs. In a Workbench query file, replace those placeholders with test values or use MySQL session variables, so the query can run directly in Workbench. Keep the Java versions in `RestaurantReservationApp.java` using their `?` placeholders.
 
 ### Data, diagrams, and presentation
 
@@ -49,7 +44,7 @@ The Java app uses `?` placeholders for user inputs. In a Workbench query file, r
 
 ### 1. Configure the CSV paths in the import script
 
-`sql/FillDB.sql` currently contains absolute `LOAD DATA LOCAL INFILE` paths from a different computer. Before running it, replace each of the three paths with the full path to the matching CSV file in your checkout. Use forward slashes in the SQL path, for example:
+`sql/FillDB.SQL` currently contains absolute `LOAD DATA LOCAL INFILE` paths from a different computer. Before running it, replace each of the three paths with the full path to the matching CSV file in your checkout. Use forward slashes in the SQL path, for example:
 
     LOAD DATA LOCAL INFILE 'C:/your/path/Database_HW3_RestaurantReservations/csv/Customer.csv'
 
@@ -57,9 +52,9 @@ Do the same for `DiningTable.csv` and `ReservationTable.csv`.
 
 ### 2. Create and populate the database
 
-Open `sql/FillDB.sql` in MySQL Workbench and run it using your local MySQL connection. This one script creates the database and tables, then imports all three CSV files. You do not need to run `CreateTable.SQL` as well.
+Open `sql/FillDB.SQL` in MySQL Workbench and run it using your local MySQL connection. This one script creates the database and tables, then imports all three CSV files. You do not need to run `CreateTable.SQL` as well.
 
-Warning: `FillDB.sql` starts by dropping `RestaurantReservationDB`. Running it again deletes and rebuilds that database, including records added through the app. Back up any data you need before rerunning it.
+Warning: `FillDB.SQL` starts by dropping `RestaurantReservationDB`. Running it again deletes and rebuilds that database, including records added through the app. Back up any data you need before rerunning it.
 
 The script enables `LOCAL INFILE` with `SET GLOBAL local_infile = 1`, which may require a MySQL account with permission to change server settings. MySQL Workbench and the server must allow local infile loading. If loading fails, enable local infile for both the server and Workbench connection, then reconnect and rerun the import.
 
@@ -76,9 +71,15 @@ The included CSVs contain 50 customers, 30 dining tables, and 75 reservations.
 
 ### 3. Run assignment queries in MySQL Workbench
 
-Create `sql/Queries.sql` and put the six Workbench-ready query statements there. The query comment section at the end of `FillDB.sql` is only a set of placeholders; it does not contain executable Q1–Q6 statements.
+Open `sql/Queries.SQL` after the database setup has completed. The file contains all six query statements and can be run as a script. Before running it, edit the sample values near the top:
 
-Run each query separately in Workbench and save the required screenshots and technical/non-technical descriptions in the assignment's requested Word document(s). For query parameters, use concrete test values or MySQL variables in this Workbench file. For example, Q2 can use a last name and phone in its WHERE clause; Q4 can use a party size and date/time; Q5 can use a section name. The Java app separately binds those values through `?` markers.
+- `@q2_search` — a customer's last name or phone number.
+- `@q4_party_size` and `@q4_res_datetime` — the party size and exact date/time for Q4.
+- `@q5_section` — a section such as `Main`, `Patio`, or `Bar`.
+
+The values are MySQL session variables used to make the script runnable in Workbench. The Java app uses `?` placeholders and binds the corresponding values when you choose a query in the app. Q4 checks bookings at the exact date/time entered; the database does not store booking duration.
+
+The Q5 query may return no rows with the original CSV data because no customer has booked every table in a section. Add suitable test reservations if you need to demonstrate a nonempty result, and remove them or rebuild the database afterward if they are only for a demo.
 
 ### 4. Configure and run the Java app
 
@@ -87,25 +88,25 @@ Run each query separately in Workbench and save the required screenshots and tec
 3. Open `Java/RestaurantReservationApp.java` and set `DB_USER` and `DB_PASSWORD` near the top to match your local MySQL account. Keep `DB_URL` pointed at `RestaurantReservationDB`.
 4. Run `RestaurantReservationApp`. Use Manage records to add or view records and Explore reservations to run the Java versions of Q1–Q6.
 
-The six Java query constants are populated. For Q2, the app binds the search text to both placeholders (last name, then phone). For Q4, it binds party size first and date/time second. For Q5, it binds the selected section.
+For Q2, the app binds the same search text to the last-name and phone placeholders. For Q4, it binds party size first and date/time second. For Q5, it binds the selected section.
 
 ## Query checklist
 
 The assignment expects six queries for this three-person group:
 
-- Q1 — reservations per table per month (GROUP BY and a join).
+- Q1 — reservations per table per month (`GROUP BY` and a join).
 - Q2 — customer reservation history (user input and a join).
-- Q3 — small, medium, or large party (CASE and table capacity).
-- Q4 — open tables at a chosen time (date/time and party-size input, with a NOT IN subquery).
-- Q5 — customers who booked every table in a selected section (division using double NOT EXISTS).
-- Q6 — bookings larger than that customer's average (correlated AVG subquery).
+- Q3 — small, medium, or large party (`CASE` and table capacity).
+- Q4 — open tables at a chosen time (date/time and party-size input, with a `NOT IN` subquery).
+- Q5 — customers who booked every table in a selected section (division using double `NOT EXISTS`).
+- Q6 — bookings larger than that customer's average (correlated `AVG` subquery).
 
 ## Submission note
 
-The repository contains the app Java source and the database setup/import SQL. The assignment also asks for query SQL file(s), Word document(s) with query descriptions and screenshots, and the group video. Keep the Workbench query file separate from the destructive database setup script.
+The assignment also asks for query SQL file(s), Word document(s) with query descriptions and screenshots, and the group video. `sql/Queries.SQL` is the shared Workbench query script; follow the assignment's individual submission instructions for which query SQL and Word files each member must submit. Keep the Workbench query script separate from the destructive database setup script.
 
 ## Notes
 
-- `FillDB.sql` and `CreateTable.SQL` create different database names and serve different purposes. Use `FillDB.sql` for the normal CSV-backed setup with the Java app.
+- `FillDB.SQL` and `CreateTable.SQL` create different database names and serve different purposes. Use `FillDB.SQL` for the normal CSV-backed setup with the Java app.
 - The setup script's CSV paths and the Java database credentials are local machine settings. Update them for your own computer; do not commit personal passwords.
 
