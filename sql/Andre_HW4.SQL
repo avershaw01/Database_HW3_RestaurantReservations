@@ -11,8 +11,9 @@ DELIMITER //
 
 
 CREATE TRIGGER trig_reservationTimeCheck_before_update
-BEFORE UPDATE ON ReservationTable
-FOR EACH ROW
+    BEFORE UPDATE
+    ON ReservationTable
+    FOR EACH ROW
 BEGIN
     IF NOT (OLD.ResDateTime <=> NEW.ResDateTime)
         AND EXISTS (
@@ -26,14 +27,15 @@ BEGIN
     THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Update rejected: another reservation for this table starts within one hour.';
-    END IF;
-END//
-DELIMETER ;
+END IF;
+END //
+DELIMITER ;
 
 
 
 
 --Procedure
+DROP PROCEDURE IF EXISTS proc_checkTableAvail;
 DELIMITER //
 CREATE PROCEDURE proc_checkTableAvail(
     IN req_dateTime DATETIME,
@@ -41,9 +43,38 @@ CREATE PROCEDURE proc_checkTableAvail(
     OUT res_numAvailable INT
 )
 BEGIN
-    IF req_dateTime IS NULL OR req_party IS NULL OR req_party <= 0 THEN SET MESSAGE_TEXT = 'Error in requested date/time and/or party size`;'
-    END IF;
+    IF req_dateTime IS NULL OR req_party IS NULL OR req_party <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT =
+                'Date/time is required and party size must be positive.';
+END IF;
 
-    SELECT COUNT(*)
-    INTO res_numAvailable
-    FROM DiningTable AS
+SELECT COUNT(*)
+INTO res_numAvailable
+FROM DiningTable AS d
+WHERE d.Capacity >= req_party
+  AND NOT EXISTS (SELECT 1
+                  FROM ReservationTable AS r
+                  WHERE r.TableID = d.TableID
+                    AND r.ResDateTime >
+                        DATE_SUB(req_dateTime, INTERVAL 1 HOUR)
+                    AND r.ResDateTime <
+                        DATE_ADD(req_dateTime, INTERVAL 1 HOUR));
+
+SELECT d.TableID,
+       d.TableNumber,
+       d.Capacity,
+       d.Section
+FROM DiningTable AS d
+WHERE d.Capacity >= req_party
+  AND NOT EXISTS (SELECT 1
+                  FROM ReservationTable AS r
+                  WHERE r.TableID = d.TableID
+                    AND r.ResDateTime >
+                        DATE_SUB(req_dateTime, INTERVAL 1 HOUR)
+                    AND r.ResDateTime <
+                        DATE_ADD(req_dateTime, INTERVAL 1 HOUR))
+ORDER BY d.Capacity, d.TableNumber;
+END //
+
+DELIMITER ;
