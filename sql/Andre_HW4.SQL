@@ -14,4 +14,21 @@ BEFORE UPDATE ON ReservationTable
 FOR EACH ROW
 BEGIN
     IF NOT (OLD.ResDateTime <=> NEW.ResDateTime) THEN
-        
+
+
+
+
+--Procedure
+DELIMITER //
+CREATE PROCEDURE proc_checkTableAvail(
+    IN req_dateTime DATETIME,
+    IN req_party INT,
+    OUT res_numAvailable INT
+)
+BEGIN
+    IF req_dateTime IS NULL OR req_party IS NULL OR req_party <= 0 THEN SET MESSAGE_TEXT = 'Error in requested date/time and/or party size`;'
+    END IF;
+
+    SELECT COUNT(*)
+    INTO res_numAvailable
+    FROM DiningTable AS
