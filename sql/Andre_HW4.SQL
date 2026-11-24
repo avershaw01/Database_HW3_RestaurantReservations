@@ -6,14 +6,29 @@
 --Returns available tables (using same 60-minute rule)
 
 USE RestaurantReservationDB;
-
+DROP TRIGGER IF EXISTS trig_reservationTimeCheck_before_update;
 DELIMITER //
+
 
 CREATE TRIGGER trig_reservationTimeCheck_before_update
 BEFORE UPDATE ON ReservationTable
 FOR EACH ROW
 BEGIN
-    IF NOT (OLD.ResDateTime <=> NEW.ResDateTime) THEN
+    IF NOT (OLD.ResDateTime <=> NEW.ResDateTime)
+        AND EXISTS (
+            SELECT 1
+            FROM ReservationTable AS other_reservation
+            WHERE other_reservation.TableID = NEW.TableID
+                AND other_reservation.ReservationID <> OLD.ReservationID
+                AND other_reservation.ResDateTime > DATE_SUB(NEW.ResDateTime, INTERVAL 1 HOUR)
+                AND other_reservation.ResDateTime < DATE_ADD(NEW.ResDateTime, INTERVAL 1 HOUR)
+        )
+    THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Update rejected: another reservation for this table starts within one hour.';
+    END IF;
+END//
+DELIMETER ;
 
 
 
